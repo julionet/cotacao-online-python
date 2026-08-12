@@ -29,6 +29,7 @@ scaffold: vazio
 4. Gera o modelo `User` completo com autenticação JWT
 5. Gera o router `/auth` completo (`register`, `login`, `refresh`, `me`)
 6. Gera model, schema, repository, service e router para a entidade fornecida
+7. Configura inicialização automática do banco e tabelas no startup da aplicação
 
 ### Para Opção B (vazio):
 
@@ -38,6 +39,7 @@ scaffold: vazio
 4. Gera o modelo `User` completo com autenticação JWT
 5. Gera o router `/auth` completo
 6. **Não cria** nenhuma entidade adicional — projeto pronto para receber novas entidades
+7. Configura inicialização automática do banco e tabelas no startup da aplicação
 
 ## Estrutura de Diretórios a Criar
 
@@ -80,11 +82,18 @@ Para Opção A, adicionar dentro de `models/`, `schemas/`, `repositories/`, `ser
 ### `app/main.py`
 
 ```python
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.core.database import init_db
 from app.routers import auth_router
 # importar outros routers aqui
 
-app = FastAPI(title="{ProjectName} API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+app = FastAPI(title="{ProjectName} API", lifespan=lifespan)
 
 app.include_router(auth_router.router)
 # registrar outros routers aqui
@@ -119,6 +128,14 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 class Base(DeclarativeBase):
     pass
+
+# Importar todos os models aqui para que create_all os reconheça
+from app.models.user import User  # noqa: E402, F401
+# from app.models.{entity} import {Entity}  — adicionar conforme novos models forem criados
+
+async def init_db() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 async def get_db() -> AsyncSession:
     async with AsyncSessionLocal() as session:
@@ -385,4 +402,6 @@ httpx
 2. Para Opção B, pare após criar os arquivos base — não crie entidade extra
 3. Para Opção A, após criar os arquivos base, gere os 5 arquivos da entidade (model, schema, repository, service, router) e registre o router em `main.py`
 4. Ao gerar uma entidade, sempre adicione `id: uuid.UUID` como chave primária mesmo que o usuário não tenha especificado
-5. Sempre informe ao usuário quais arquivos foram criados ao final
+5. **Sempre importe todos os models em `database.py`** antes de `init_db` ser chamado — o SQLAlchemy só cria as tabelas dos models que foram importados. Adicione os imports no topo do arquivo conforme os models existirem no projeto
+6. O `lifespan` em `main.py` é o único lugar onde `init_db` é chamado — nunca chame em outro lugar
+7. Sempre informe ao usuário quais arquivos foram criados ao final
