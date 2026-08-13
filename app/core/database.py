@@ -13,8 +13,6 @@ class Base(DeclarativeBase):
 
 # Importar todos os models aqui para que create_all os reconheça
 from app.models.user import User  # noqa: E402, F401
-from app.models.currency import Currency  # noqa: E402, F401
-from app.models.exchange import Exchange  # noqa: E402, F401
 
 
 async def init_db() -> None:

@@ -10,8 +10,14 @@ class Settings(BaseSettings):
 
     # Integração externa de cotações (usada em POST /v1/exchanges/sync)
     EXCHANGE_API_BASE_URL: str = "https://economia.awesomeapi.com.br"
-    EXCHANGE_API_PAIRS: str = "USD-BRL,EUR-BRL"
+    EXCHANGE_API_TOKEN: str = ""
     EXCHANGE_API_TIMEOUT: int = 10
+
+    # Integração com Airtable
+    AIRTABLE_BASE_URL: str = ""
+    AIRTABLE_TOKEN: str = ""
+    AIRTABLE_TABLE_CURRENCY: str = "Currency"
+    AIRTABLE_TIMEOUT: int = 30
 
     model_config = {"env_file": ".env"}
 
