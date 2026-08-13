@@ -371,18 +371,24 @@ responses:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Requisição inválida
   '401':
     description: Não autenticado
     content:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Não autenticado
   '500':
     description: Erro interno do servidor
     content:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Erro interno do servidor
 ```
 
 ### POST
@@ -401,24 +407,32 @@ responses:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Requisição inválida
   '401':
     description: Não autenticado
     content:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Não autenticado
   '404':
     description: Recurso não encontrado
     content:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Recurso não encontrado
   '500':
     description: Erro interno do servidor
     content:
       application/json:
         schema:
           $ref: '#/components/schemas/ErrorResponse'
+        example:
+          detail: Erro interno do servidor
 ```
 
 ### PUT / PATCH / DELETE

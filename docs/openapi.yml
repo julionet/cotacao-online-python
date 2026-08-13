@@ -1,0 +1,543 @@
+openapi: 3.1.0
+
+info:
+  title: Cotação Online API
+  version: 1.0.0
+  description: API para consulta e gerenciamento de cotações financeiras
+  termsOfService: https://josejulio.com.br/termos
+  contact:
+    name: Jose Julio
+    email: jose.junior.229952@a.fecaf.com.br
+    url: https://josejulio.com.br/suporte
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development
+  - url: https://staging.api.cotacaoonline.com.br
+    description: Staging
+  - url: https://api.cotacaoonline.com.br
+    description: Production
+
+tags:
+  - name: Auth
+    description: Autenticação e gerenciamento de sessão
+  - name: Currency
+    description: Consulta de moedas para cotação financeira
+  - name: Exchange
+    description: Consulta de cotações financeiras
+
+paths:
+  /v1/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registrar novo usuário
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+            example:
+              name: João Silva
+              email: joao@exemplo.com
+              password: Senh@123
+      responses:
+        '201':
+          description: Criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                name: João Silva
+                email: joao@exemplo.com
+                is_active: true
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '404':
+          description: Recurso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Recurso não encontrado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Retorna dados do usuário autenticado
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                name: João Silva
+                email: joao@exemplo.com
+                is_active: true
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Efetua autenticação do usuário
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: jose@exemplo.com
+              password: Senh@123
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                access_token: xxxxxx.xxxxxxxx.xxxxxxx
+                refresh_token: xxxxxx.xxxxxxxx.xxxxxx
+                token_type: bearer
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '404':
+          description: Recurso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Recurso não encontrado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Efetua renovação do token de acesso
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refresh_token: xxxxxx.xxxxxxxx.xxxxxxxx
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+              example:
+                access_token: xxxxxx.xxxxxxxx.xxxxxxx
+                token_type: bearer
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '404':
+          description: Recurso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Recurso não encontrado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/currencies:
+    get:
+      tags:
+        - Currency
+      summary: Retorna lista de moedas ativas
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CurrencyResponse'
+              example:
+                - id: recFTu2BE9PnKgJ4u
+                  name: USD-BRL
+                  code: USD
+                  codein: BRL
+                  last_date: '2026-08-12T20:00:00'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/exchanges:
+    get:
+      tags:
+        - Exchange
+      summary: Retorna lista de cotações de moedas
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExchangeResponse'
+              example:
+                - name: USD-BRL
+                  bid: 4.5
+                  ask: 4.2
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+  /v1/exchanges/sync:
+    post:
+      tags:
+        - Exchange
+      summary: Atualiza cotação buscando informações em API
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sincronização realizada com sucesso (sem corpo de resposta)
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Requisição inválida
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Não autenticado
+        '404':
+          description: Recurso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Recurso não encontrado
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: Erro interno do servidor
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtido via POST /v1/auth/login
+
+  schemas:
+    UserCreate:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          description: Nome completo do usuário
+        email:
+          type: string
+          description: Email do usuário
+        password:
+          type: string
+          description: Senha com mínimo de 8 caracteres
+
+    UserResponse:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - is_active
+      properties:
+        id:
+          type: string
+          description: UUID do usuário
+        name:
+          type: string
+          description: Nome completo
+        email:
+          type: string
+          description: Email do usuário
+        is_active:
+          type: boolean
+          description: Status da conta
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          description: Email do usuário
+        password:
+          type: string
+          description: Senha do usuário
+
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - token_type
+      properties:
+        access_token:
+          type: string
+          description: Bearer token de acesso
+        refresh_token:
+          type: string
+          description: Token para renovação
+        token_type:
+          type: string
+          description: Tipo do token
+
+    RefreshRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Token para renovação
+
+    AccessTokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+      properties:
+        access_token:
+          type: string
+          description: Bearer token de acesso
+        token_type:
+          type: string
+          description: Tipo do token
+
+    CurrencyResponse:
+      type: object
+      required:
+        - id
+        - name
+        - code
+        - codein
+        - last_date
+      properties:
+        id:
+          type: string
+          description: Identificação da moeda
+        name:
+          type: string
+          description: Nome da moeda
+        code:
+          type: string
+          description: Código da moeda de origem
+        codein:
+          type: string
+          description: Código da moeda de destino
+        last_date:
+          type: string
+          format: date-time
+          description: Data e hora da última atualização
+
+    ExchangeResponse:
+      type: object
+      required:
+        - name
+        - bid
+        - ask
+      properties:
+        name:
+          type: string
+          description: Nome da moeda
+        bid:
+          type: number
+          format: float
+          description: Valor de compra da moeda
+        ask:
+          type: number
+          format: float
+          description: Valor de venda da moeda
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Descrição do erro
+      example:
+        detail: Recurso não encontrado

@@ -28,8 +28,6 @@ type: bearer_jwt
   description: Consulta de moedas para cotação financeira
 - name: Exchange
   description: Consulta de cotações financeiras
-- name: Warning
-  description: Consulta lista de alertas não lidos
 
 ## Schemas
 
@@ -60,45 +58,21 @@ type: bearer_jwt
 - access_token:  string (required) - Bearer token de acesso
 - token_type: string (required) - Tipo do token
 
-### CurrencyCreate
-- name: string (required) - Nome da moeda
-- code: string (required) - Código da moeda de origem
-- codein: string (required) - Código da moeda de destino
-- low: double - Valor limite inferior para alerta
-- high: double - Valor limite superior para alerta
-
-### CurrencyUpdate
-- name: string (required) - Nome da moeda
-- code: string (required) - Código da moeda de origem
-- codein: string (required) - Código da moeda de destino
-- low: double - Valor limite inferior para alerta
-- high: double - Valor limite superior para alerta
-- is_active: boolean (required) - Determina se moeda está ativa
-
 ### CurrencyResponse
-- id: string (required) - UUID da moeda
+- id: string (required) - Identificação da moeda
 - name: string (required) - Nome da moeda
 - code: string (required) - Código da moeda de origem
 - codein: string (required) - Código da moeda de destino
-- low: double - Valor limite inferior para alerta
-- high: double - Valor limite superior para alerta
-- is_active: boolean (required) - Determina se moeda está ativa
-
-### WarningResponse
-- id: string (required) - UUID do alerta
-- description: string (required) - Descrição do alerta
-- timestamp: timestamp - Data e horário do alerta
-- is_read: boolean (required) - Determina se alerta foi lido
+- last_date: datetime (required) - Data e hora da última atualização
 
 ### ExchangeResponse
-- id: string (required) - UUID da moeda
 - name: string (required) - Nome da moeda
-- bid: double (required) - Valor de compra da moeda
-- ask: double (required) - Valor de venda da moeda
+- bid: float (required) - Valor de compra da moeda
+- ask: float (required) - Valor de venda da moeda
 
 ## Endpoints
 
-### POST /auth/register
+### POST /v1/auth/register
 tag: Auth
 summary: Registrar novo usuário
 security: none
@@ -116,7 +90,7 @@ response_example:
     email: joao@exemplo.com
     is_active: true
 
-### GET /auth/me
+### GET /v1/auth/me
 tag: Auth
 summary: Retorna dados do usuário autenticado
 security: bearer
@@ -129,11 +103,12 @@ response_example:
     email: joao@exemplo.com
     is_active: true
 
-### POST /auth/login
+### POST /v1/auth/login
 tag: Auth
 summary: Efetua autenticação do usuário
 security: none
 request_body: LoginRequest
+responses:
   200: TokenResponse
 request_example:
   email: jose@exemplo.com
@@ -144,11 +119,12 @@ response_example:
     refresh_token: xxxxxx.xxxxxxxx.xxxxxx
     token_type: bearer
 
-### POST /auth/refresh
+### POST /v1/auth/refresh
 tag: Auth
 summary: Efetua renovação do token de acesso
 security: bearer
-request_body: RefreshToken
+request_body: RefreshRequest
+responses:
   200: AccessTokenResponse
 request_example:
   refresh_token: xxxxxx.xxxxxxxx.xxxxxxxx
@@ -157,97 +133,35 @@ response_example:
     access_token: xxxxxx.xxxxxxxx.xxxxxxx
     token_type: bearer
 
-### POST /currencies
-tag: Currency
-summary: Cria uma nova moeda
-security: bearer
-request_body: CurrencyCreate
-  201: CurrencyResponse
-request_example:
-  name: USD-BRL
-  code: USD
-  codein: BRL
-  low: 2.5
-  high: 5.5
-response_example:
-  id: 550e8400-e29b-41d4-a716-446655440000
-  name: USD-BRL
-  code: USD
-  codein: BRL
-  low: 2.5
-  high: 5.5
-  is_active: true
-
-### PUT /currencies/{id}
-tag: Currency
-summary: Altera os dados de uma moeda
-security: bearer
-request_body: CurrencyUpdate
-  201: CurrencyResponse
-request_example:
-  name: USD-BRL
-  code: USD
-  codein: BRL
-  low: 2.5
-  high: 5.5
-  is_active: true
-response_example:
-  id: 550e8400-e29b-41d4-a716-446655440000
-  name: USD-BRL
-  code: USD
-  codein: BRL
-  low: 2.5
-  high: 5.5
-  is_active: true
-
-### DELETE /currencies/{id}
-tag: Currency
-summary: Remove uma moeda
-security: bearer
-responses:
-  200: 
-
-### GET /currencies/active
+### GET /v1/currencies
 tag: Currency
 summary: Retorna lista de moedas ativas
 security: bearer
 responses:
-  200: CurrencyResponse
+  200: list[CurrencyResponse]
 response_example:
   200:
-    id: 550e8400-e29b-41d4-a716-446655440000
+    id: recFTu2BE9PnKgJ4u
     name: USD-BRL
     code: USD
     codein: BRL
-    is_active: true
+    last_date: 2026-08-12T20:00:00
 
-### GET /warnings
-tag: Warning
-summary: Retorna lista de alertas
+### GET /v1/exchanges
+tag: Exchange
+summary: Retorna lista de cotações de moedas
 security: bearer
 responses:
-  200: WarningResponse
+  200: list[ExchangeResponse]
 response_example:
   200:
-    id: 550e8400-e29b-41d4-a716-446655440000
-    description: Alta da moeda USD-BRL em 10%
-
-### GET /exchanges
-tag: Exchange
-summary: Retorna cotação de moedas ativas
-security: bearer
-response:
-  200: ExchangeResponse
-response_example:
-  200:
-    id: 550e8400-e29b-41d4-a716-446655440000
     name: USD-BRL
     bid: 4.5
     ask: 4.2
 
-### POST /exchanges/update
+### POST /v1/exchanges/sync
 tag: Exchange
 summary: Atualiza cotação buscando informações em API
 security: bearer
-response:
-  200:
+responses:
+  200: (sem corpo de resposta)
