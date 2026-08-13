@@ -9,5 +9,6 @@ class CurrencyResponse(BaseModel):
     code: str
     codein: str
     last_date: datetime
+    exchange: str | None = None
 
     model_config = {"from_attributes": True}
