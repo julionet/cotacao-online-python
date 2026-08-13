@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]>=2.0
+asyncpg
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic-settings
+pydantic[email]
+httpx
