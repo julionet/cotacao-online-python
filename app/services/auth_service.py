@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from fastapi import HTTPException, status
@@ -18,10 +19,24 @@ class AuthService:
         existing = await self.repository.find_by_email(data.email)
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email já cadastrado")
+        # Validate password: at least one uppercase, one lowercase, one digit,
+        # one special character and minimum length of 6
+        password = data.password or ""
+        pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$'
+        if not re.match(pattern, password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Senha inválida: deve ter mínimo 6 caracteres, "
+                    "pelo menos uma letra maiúscula, uma letra minúscula, "
+                    "um número e um caractere especial"
+                ),
+            )
+
         user = User(
             name=data.name,
             email=data.email,
-            password=hash_password(data.password),
+            password=hash_password(password),
         )
         return await self.repository.create(user)
 
