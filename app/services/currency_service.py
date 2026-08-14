@@ -90,12 +90,15 @@ class CurrencyService:
 
             try:
                 last_date = datetime.fromisoformat(created_time_str.replace("Z", "+00:00"))
+                exchange_list = fields.get("Exchange")
+                exchange_id = exchange_list[0] if isinstance(exchange_list, list) and exchange_list else None
                 currency = CurrencyResponse(
                     id=record.get("id"),
                     name=fields.get("Name"),
                     code=fields.get("Origin"),
                     codein=fields.get("Destiny"),
                     last_date=last_date,
+                    exchange=exchange_id,
                 )
             except (KeyError, ValueError, AttributeError) as exc:
                 logger.error("Error mapping record %s: %s", record.get("id"), exc)

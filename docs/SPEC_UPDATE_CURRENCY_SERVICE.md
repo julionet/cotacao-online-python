@@ -1,16 +1,22 @@
-# ATUALIZAÇÃO: Currency Service - Adicionar Atributo Exchange
+# DOCUMENTO DE MUDANÇAS: Atualização do Atributo Exchange
 
-**Arquivo:** `currency_service.py`  
-**Método:** `list_activate()`  
-**Alteração:** Incluir campo `exchange` em CurrencyResponse  
-**Versão:** 1.1  
+**Data:** 2026-08-13  
+**Versão:** 1.0 → 1.1  
+**Escopo:** Currency Service e Exchange Service
 
 ---
 
-## MUDANÇA REQUERIDA
+## 📋 Resumo da Mudança
 
-### Antes (Versão 1.0)
+O atributo `exchange` em `CurrencyResponse` foi alterado de **`list[str]`** para **`str | None`**, armazenando apenas o **primeiro item do array** retornado pelo Airtable.
 
+---
+
+## 🔄 Mudanças Específicas
+
+### 1. CurrencyResponse Model
+
+**Antes:**
 ```python
 class CurrencyResponse(BaseModel):
     id: str
@@ -18,99 +24,243 @@ class CurrencyResponse(BaseModel):
     code: str
     codein: str
     last_date: datetime
-
-    model_config = {"from_attributes": True}
+    exchange: list[str] | None  # Array de IDs
 ```
 
-### Depois (Versão 1.1)
-
+**Depois:**
 ```python
 class CurrencyResponse(BaseModel):
-    id: str                          # Airtable record ID (ex: "recFTu2BE9PnKgJ4u")
-    name: str                        # Nome do par (ex: "BRL_EUR")
-    code: str                        # Moeda origem (ex: "BRL")
-    codein: str                      # Moeda destino (ex: "EUR")
-    last_date: datetime              # Data criação (createdTime)
-    exchange: list[str] | None       # IDs do Exchange relacionado (novo campo)
-
-    model_config = {"from_attributes": True}
+    id: str
+    name: str
+    code: str
+    codein: str
+    last_date: datetime
+    exchange: str | None  # Apenas um ID ou None
 ```
 
 ---
 
-## MAPEAMENTO DO NOVO CAMPO
+### 2. Mapeamento em list_activate()
 
-| Campo | Origem | Tipo | Exemplo | Comportamento |
-|-------|--------|------|---------|---------------|
-| `exchange` | `record.fields.Exchange` | `list[str] \| None` | `["recov2d7ZkAekb9AM"]` ou `[]` ou `None` | Array de record IDs do Airtable ou vazio |
-
----
-
-## IMPLEMENTAÇÃO
-
-### Mudança no Método list_activate()
-
-**Adicionar mapeamento:**
-
+**Antes:**
 ```python
-# Antes:
-currency = CurrencyResponse(
-    id=record.get("id"),
-    name=fields.get("Name"),
-    code=fields.get("Origin"),
-    codein=fields.get("Destiny"),
-    last_date=last_date
-)
-
-# Depois:
 currency = CurrencyResponse(
     id=record.get("id"),
     name=fields.get("Name"),
     code=fields.get("Origin"),
     codein=fields.get("Destiny"),
     last_date=last_date,
-    exchange=fields.get("Exchange")  # Novo campo
+    exchange=fields.get("Exchange")  # Array direto
+)
+```
+
+**Depois:**
+```python
+exchange_list = fields.get("Exchange")
+exchange_id = None
+if exchange_list and isinstance(exchange_list, list) and len(exchange_list) > 0:
+    exchange_id = exchange_list[0]  # Apenas o primeiro item
+
+currency = CurrencyResponse(
+    id=record.get("id"),
+    name=fields.get("Name"),
+    code=fields.get("Origin"),
+    codein=fields.get("Destiny"),
+    last_date=last_date,
+    exchange=exchange_id  # String ou None
 )
 ```
 
 ---
 
-## VALIDAÇÃO
+### 3. Verificação em ExchangeService._sync_exchange()
 
-### Possíveis Valores
+**Antes:**
+```python
+if currency.exchange and len(currency.exchange) > 0:
+    exchange_id = currency.exchange[0]  # Pegar primeiro item
+    # Fazer PUT
+else:
+    # Fazer POST
+```
 
-1. **Array com IDs (Exchange existe):**
-   ```python
-   exchange = ["recov2d7ZkAekb9AM"]
-   # Resultado: Exchange existente, deve fazer PUT
-   ```
-
-2. **Array vazio (Exchange não existe):**
-   ```python
-   exchange = []
-   # Resultado: Exchange não existe, deve fazer POST
-   ```
-
-3. **None (Campo não retornado):**
-   ```python
-   exchange = None
-   # Resultado: Exchange não existe, deve fazer POST
-   ```
+**Depois:**
+```python
+if currency.exchange:
+    # currency.exchange já é a string com ID
+    # Fazer PUT em: /Exchange/{currency.exchange}
+else:
+    # Fazer POST em: /Exchange
+```
 
 ---
 
-## CHECKLIST
+## ✅ Benefícios
 
-- [ ] Adicionar `exchange: list[str] | None` ao CurrencyResponse
-- [ ] Atualizar método list_activate() para mapear `fields.Exchange`
-- [ ] Testar se resposta Airtable contém o campo
-- [ ] Validar se array vazio é retornado corretamente
-- [ ] Validar se None é retornado corretamente
-- [ ] Atualizar testes unitários (TC-001, TC-002, etc)
-- [ ] Documentação atualizada
+| Aspecto | Benefício |
+|---------|-----------|
+| **Simplicidade** | Menos processamento (sem necessidade de indexar array) |
+| **Type Safety** | Tipo mais específico (str vs list[str]) |
+| **Performance** | Menos alocação de memória |
+| **Clareza** | Intent mais claro - apenas 1 exchange por currency |
+| **Lógica** | Condicional simplificada (if/else em vez de len check) |
 
 ---
 
-**Status:** ✅ Pronto para implementar
+## 📝 Impacto nos Arquivos
 
-**Impacto:** Mínimo - apenas adição de novo campo sem quebra de compatibilidade
+### currency_service.py
+- ✅ Atualizar `CurrencyResponse` model
+- ✅ Atualizar lógica de mapeamento em `list_activate()`
+- ✅ Atualizar testes unitários (TC-001, TC-002, etc)
+
+### exchange_service.py
+- ✅ Atualizar lógica em `_sync_exchange()`
+- ✅ Atualizar condição de verificação de exchange
+
+### Arquivos de Especificação
+- ✅ `currency-service-spec.md` - Sem alterações (especifica CurrencyResponse)
+- ✅ `currency-service-update.md` - **ATUALIZADO** ✨
+- ✅ `exchange-sync-sdd.md` - **ATUALIZADO** ✨
+
+---
+
+## 🔍 Casos de Uso
+
+### Cenário 1: Currency com Exchange Existente
+
+**Airtable Response:**
+```json
+{
+  "id": "recFTu2BE9PnKgJ4u",
+  "fields": {
+    "Name": "BRL_EUR",
+    "Origin": "BRL",
+    "Destiny": "EUR",
+    "Exchange": ["recov2d7ZkAekb9AM"]  // Array com 1 item
+  }
+}
+```
+
+**CurrencyResponse:**
+```python
+CurrencyResponse(
+    id="recFTu2BE9PnKgJ4u",
+    name="BRL_EUR",
+    code="BRL",
+    codein="EUR",
+    exchange="recov2d7ZkAekb9AM"  # String extraída
+)
+```
+
+**ExchangeService.sync_all():**
+```python
+# currency.exchange = "recov2d7ZkAekb9AM" (truthy)
+if currency.exchange:
+    # → Fazer PUT em /Exchange/recov2d7ZkAekb9AM
+    # → Atualizar cotação existente
+```
+
+---
+
+### Cenário 2: Currency sem Exchange
+
+**Airtable Response:**
+```json
+{
+  "id": "rec2BE9PnKgJ4u2d7",
+  "fields": {
+    "Name": "BRL_USD",
+    "Origin": "BRL",
+    "Destiny": "USD",
+    "Exchange": []  // Array vazio
+  }
+}
+```
+
+**CurrencyResponse:**
+```python
+CurrencyResponse(
+    id="rec2BE9PnKgJ4u2d7",
+    name="BRL_USD",
+    code="BRL",
+    codein="USD",
+    exchange=None  # Nenhum item no array
+)
+```
+
+**ExchangeService.sync_all():**
+```python
+# currency.exchange = None (falsy)
+if not currency.exchange:
+    # → Fazer POST em /Exchange
+    # → Criar novo registro com Guid gerado
+```
+
+---
+
+## 🧪 Testes Afetados
+
+### currency_service.py
+- TC-001: Testar se exchange é string ou None
+- TC-002: Testar se apenas primeiro item é extraído
+- TC-003: Testar se array vazio resulta em None
+- TC-004: Testar se campo Exchange ausente resulta em None
+
+### exchange_service.py
+- Atualizar condições de PUT/POST
+- Verificar se exchange é None corretamente
+- Testar ambos os paths (atualização e criação)
+
+---
+
+## 📚 Documentos Atualizados
+
+✅ **currency-service-update.md**
+- Modelo CurrencyResponse atualizado
+- Mapeamento com extração de primeiro item
+- Validação e casos de uso
+
+✅ **exchange-sync-sdd.md**
+- Fluxo principal atualizado (linha 58)
+- Lógica interna de _sync_exchange() atualizada
+- Identificação de exchange simplificada (linha 455)
+- Exemplos e casos de uso mantêm consistência
+
+---
+
+## ⚠️ Notas Importantes
+
+1. **Compatibilidade com Airtable:**
+   - Airtable continua retornando `Exchange` como array
+   - Backend extrai apenas o primeiro item
+   - Garante compatibilidade com possíveis multiplos registros no futuro (se necessário)
+
+2. **Segurança:**
+   - Validação de tipo (check se é list)
+   - Validação de tamanho (len > 0)
+   - Fallback para None se vazio
+
+3. **Atomicidade:**
+   - Cada currency tem no máximo 1 exchange relacionado
+   - PUT sempre usa o mesmo ID
+   - Impossível ter múltiplos exchanges ativos
+
+---
+
+## ✨ Checklist de Implementação
+
+- [ ] Atualizar `CurrencyResponse` model em `currency_service.py`
+- [ ] Atualizar mapeamento em `currency_service.list_activate()`
+- [ ] Atualizar testes de `currency_service.py`
+- [ ] Atualizar lógica em `exchange_service._sync_exchange()`
+- [ ] Testar condição de exchange vazio (None)
+- [ ] Testar condição de exchange preenchido (string)
+- [ ] Validar fluxo completo de sincronização
+- [ ] Documentação de código atualizada
+
+---
+
+**Status:** ✅ Mudança Aprovada e Documentada
+
+**Implementação:** Pronto para começar
