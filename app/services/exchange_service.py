@@ -39,9 +39,17 @@ class ExchangeService:
         for record in records:
             fields = record.get("fields", {})
             try:
+                # CurrencyName comes as an array of strings like ["EUR-BRL"].
+                currency_name = fields.get("CurrencyName")
+                if isinstance(currency_name, list) and currency_name:
+                    name = currency_name[0]
+                else:
+                    # fallback to legacy `Name` field if present
+                    name = fields.get("Name")
+
                 exchanges.append(
                     ExchangeResponse(
-                        name=fields.get("Name"),
+                        name=str(name),
                         bid=float(fields.get("Bid")),
                         ask=float(fields.get("Ask")),
                     )
