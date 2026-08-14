@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     AIRTABLE_BASE_URL: str = ""
     AIRTABLE_TOKEN: str = ""
     AIRTABLE_TABLE_CURRENCY: str = "Currency"
+    AIRTABLE_TABLE_EXCHANGE: str = "Exchange"
     AIRTABLE_TIMEOUT: int = 30
 
     model_config = {"env_file": ".env"}
