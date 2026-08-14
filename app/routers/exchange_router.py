@@ -16,5 +16,4 @@ async def list_exchanges(current_user: dict = Depends(get_current_user)):
 @router.post("/sync", status_code=status.HTTP_200_OK)
 async def sync_exchanges(current_user: dict = Depends(get_current_user)):
     service = ExchangeService()
-    await service.sync()
-    return None
+    return await service.sync_all()

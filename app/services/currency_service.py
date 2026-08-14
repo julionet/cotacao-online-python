@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class CurrencyService:
-    async def list_active(self) -> list[CurrencyResponse]:
+    async def list_activate(self) -> list[CurrencyResponse]:
         """Busca todas as moedas ativas (Active == true) do Airtable.
 
         Returns:
