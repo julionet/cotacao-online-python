@@ -216,11 +216,13 @@ class ExchangeService:
         self._require_airtable_config()
 
         fields_base = {
+            "Guid": str(uuid.uuid4()),
             "Bid": quote["bid"],
             "Ask": quote["ask"],
             "Variation": quote["varBid"],
             "Percent": quote["pctChange"],
             "Timestamp": quote["create_date"],
+            "Currency": [currency.id],
         }
 
         if currency.exchange:
