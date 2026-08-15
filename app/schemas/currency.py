@@ -10,5 +10,7 @@ class CurrencyResponse(BaseModel):
     codein: str
     last_date: datetime
     exchange: str | None = None
+    max_variation: float | None = None
+    min_variation: float | None = None
 
     model_config = {"from_attributes": True}

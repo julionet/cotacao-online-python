@@ -14,6 +14,7 @@ from app.services.currency_service import CurrencyService
 logger = logging.getLogger(__name__)
 
 _BACKOFF = (1, 2, 4)
+_WEBHOOK_TIMEOUT = 15
 
 
 class ExchangeService:
@@ -99,6 +100,10 @@ class ExchangeService:
             logger.info("Processing %s...", currency.name)
             try:
                 quote = await self._fetch_awesome_api(currency.code, currency.codein)
+
+                if self._is_variation_out_of_range(currency, quote["pctChange"]):
+                    await self._notify_variation_alert(currency, quote)
+
                 result = await self._sync_exchange(currency, quote)
                 return {"action": result["action"]}
             except Exception as exc:
@@ -199,8 +204,40 @@ class ExchangeService:
             "create_date": entry["create_date"],
         }
 
+    @staticmethod
+    def _is_variation_out_of_range(currency: CurrencyResponse, pct_change: float) -> bool:
+        if currency.max_variation is None or currency.min_variation is None:
+            return False
+        return pct_change > currency.max_variation or pct_change < currency.min_variation
+
+    async def _notify_variation_alert(self, currency: CurrencyResponse, quote: dict) -> None:
+        """Notifica oscilação de cotação fora dos limites configurados via webhook do Make.com."""
+        if not settings.MAKE_WEBHOOK_URL or not settings.ALERT_EMAIL:
+            logger.warning(
+                "MAKE_WEBHOOK_URL/ALERT_EMAIL not configured, skipping variation alert for %s",
+                currency.name,
+            )
+            return
+
+        payload = {
+            "email": settings.ALERT_EMAIL,
+            "title": "Oscilação de cotação alem dos limites",
+            "message": (
+                f'A cotação da moeda "{currency.code}" para "{currency.codein}" '
+                f'oscilou "{quote["pctChange"]}"'
+            ),
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=_WEBHOOK_TIMEOUT) as client:
+                response = await client.post(settings.MAKE_WEBHOOK_URL, json=payload)
+                response.raise_for_status()
+            logger.info("Variation alert sent for %s (pctChange=%s)", currency.name, quote["pctChange"])
+        except httpx.HTTPError as exc:
+            logger.error("Failed to send variation alert for %s: %s", currency.name, exc)
+
     async def _sync_exchange(self, currency: CurrencyResponse, quote: dict) -> dict:
-        """Sincroniza uma cotação no Airtable (POST ou PUT).
+        """Sincroniza uma cotação no Airtable (POST ou PATCH).
 
         Args:
             currency: Moeda com possível Exchange relacionado
@@ -216,7 +253,6 @@ class ExchangeService:
         self._require_airtable_config()
 
         fields_base = {
-            "Guid": str(uuid.uuid4()),
             "Bid": quote["bid"],
             "Ask": quote["ask"],
             "Variation": quote["varBid"],
@@ -227,7 +263,7 @@ class ExchangeService:
 
         if currency.exchange:
             url = f"{settings.AIRTABLE_BASE_URL}/{settings.AIRTABLE_TABLE_EXCHANGE}/{currency.exchange}"
-            result = await self._airtable_request("PUT", url, json={"fields": fields_base})
+            result = await self._airtable_request("PATCH", url, json={"fields": fields_base})
             logger.info("Updated exchange %s for currency %s", currency.exchange, currency.name)
             return {
                 "action": "updated",
@@ -238,7 +274,7 @@ class ExchangeService:
 
         guid = str(uuid.uuid4())
         url = f"{settings.AIRTABLE_BASE_URL}/{settings.AIRTABLE_TABLE_EXCHANGE}"
-        payload = {"fields": {**fields_base, "Guid": guid, "Currency": [currency.id]}}
+        payload = {"fields": {**fields_base, "Guid": guid}}
         result = await self._airtable_request("POST", url, json=payload)
         new_id = result.get("id")
         logger.info("Created exchange %s for currency %s", new_id, currency.name)

@@ -12,6 +12,7 @@ A aplicação expõe endpoints autenticados via JWT para:
 - Listagem de pares de moedas disponíveis (integração com Airtable)
 - Consulta de cotações financeiras em tempo real (integração com AwesomeAPI)
 - Sincronização manual de cotações
+- Alerta automático de oscilação de cotação fora dos limites configurados (integração com Make.com)
 
 ---
 
@@ -51,6 +52,7 @@ docs/               # Especificações, SQL e documentação OpenAPI
 - PostgreSQL
 - Credenciais de acesso ao **Airtable** (tabelas `Currency` e `Exchange`)
 - Credenciais de acesso à **AwesomeAPI** (cotações)
+- URL de webhook do **Make.com** (alerta de oscilação de cotação)
 
 ---
 
@@ -79,6 +81,10 @@ AIRTABLE_TOKEN=seu_token_airtable
 AIRTABLE_TABLE_CURRENCY=Currency
 AIRTABLE_TABLE_EXCHANGE=Exchange
 AIRTABLE_TIMEOUT=30
+
+# Alerta de oscilação de cotação (Make.com)
+MAKE_WEBHOOK_URL=https://hook.us2.make.com/seu-webhook-aqui
+ALERT_EMAIL=seu-email@exemplo.com
 ```
 
 ### Banco de dados
@@ -147,6 +153,26 @@ O serviço estará disponível em: **http://localhost:8000**
 |---|---|---|---|
 | `GET` | `/v1/exchanges` | Bearer JWT | Retorna as cotações das moedas ativas |
 | `POST` | `/v1/exchanges/sync` | Bearer JWT | Sincroniza cotações com a API externa |
+
+---
+
+## Alerta de Oscilação de Cotação
+
+Durante a sincronização (`POST /v1/exchanges/sync`), cada moeda ativa tem sua cotação obtida na AwesomeAPI e o campo `pctChange` (variação percentual) é comparado com os limites `Max` e `Min` cadastrados no registro correspondente da tabela `Currency` do Airtable.
+
+- Se `pctChange > Max` ou `pctChange < Min`, é disparado um `POST` para o webhook configurado em `MAKE_WEBHOOK_URL` (Make.com), com o corpo:
+
+  ```json
+  {
+    "email": "<ALERT_EMAIL>",
+    "title": "Oscilação de cotação alem dos limites",
+    "message": "A cotação da moeda \"<code>\" para \"<codein>\" oscilou \"<pctChange>\""
+  }
+  ```
+
+- Se a moeda não tiver `Max` ou `Min` preenchido no Airtable, a verificação é ignorada para essa moeda (sem alerta).
+- Falha no envio do alerta (timeout, erro HTTP, webhook não configurado) apenas gera log de erro/aviso — não interrompe a sincronização nem marca a moeda como falha, já que a cotação já foi salva no Airtable.
+- O alerta é disparado a cada sincronização em que o limite estiver excedido (sem controle de estado para evitar repetição).
 
 ---
 

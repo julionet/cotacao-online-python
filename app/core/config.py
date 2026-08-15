@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     AIRTABLE_TABLE_EXCHANGE: str = "Exchange"
     AIRTABLE_TIMEOUT: int = 30
 
+    # Alerta de oscilação de cotação (Make.com)
+    MAKE_WEBHOOK_URL: str = ""
+    ALERT_EMAIL: str = ""
+
     model_config = {"env_file": ".env"}
 
 

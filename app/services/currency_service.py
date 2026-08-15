@@ -92,6 +92,8 @@ class CurrencyService:
                 last_date = datetime.fromisoformat(created_time_str.replace("Z", "+00:00"))
                 exchange_list = fields.get("Exchange")
                 exchange_id = exchange_list[0] if isinstance(exchange_list, list) and exchange_list else None
+                max_variation = fields.get("Max")
+                min_variation = fields.get("Min")
                 currency = CurrencyResponse(
                     id=record.get("id"),
                     name=fields.get("Name"),
@@ -99,6 +101,8 @@ class CurrencyService:
                     codein=fields.get("Destiny"),
                     last_date=last_date,
                     exchange=exchange_id,
+                    max_variation=float(max_variation) if max_variation is not None else None,
+                    min_variation=float(min_variation) if min_variation is not None else None,
                 )
             except (KeyError, ValueError, AttributeError) as exc:
                 logger.error("Error mapping record %s: %s", record.get("id"), exc)
