@@ -47,6 +47,8 @@ api_key_header: {X-API-Key}  # obrigatório apenas para api_key
 
 ### {NomeDoSchema}
 - {campo}: {tipo} ({required|optional}) - {descrição}
+- {campo}: list[{tipo}] ({required|optional}) - {descrição}
+- {campo}: list[{NomeDoSchema}] ({required|optional}) - {descrição}
 
 ## Endpoints
 
@@ -61,7 +63,9 @@ query_params:
   {param}: {tipo} ({required|optional}) - {descrição}
 header_params:
   {header}: {tipo} ({required|optional}) - {descrição}
+content_type: application/json | application/x-www-form-urlencoded  # opcional, padrão: application/json
 request_body: {NomeDoSchema}
+request_body_description: {Descrição do corpo da requisição}  # opcional
 responses:
   {código}: {NomeDoSchema | list[NomeDoSchema]}
   {código}: {descrição livre para erros específicos}
@@ -193,18 +197,23 @@ tags:
 paths:
   {/caminho}:
     {método}:
+      operationId: {operationId}
       tags:
         - {tag}
       summary: {summary}
       description: {description}
       security:
         - {esquema}: []
-      parameters: [...]
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - ...
       requestBody: {...}
       responses: {...}
 
 components:
   securitySchemes: {...}
+  parameters: {...}
+  responses: {...}
   schemas: {...}
 ```
 
@@ -253,6 +262,100 @@ ApiKeyAuth:
 
 **ambos:** incluir os dois blocos acima.
 
+### `components/parameters/RequestId`
+
+Sempre incluir este parâmetro. É referenciado por todos os endpoints:
+
+```yaml
+RequestId:
+  name: X-Request-ID
+  in: header
+  required: false
+  schema:
+    type: string
+    format: uuid
+  description: Identificador único da requisição no formato UUID
+  example: 550e8400-e29b-41d4-a716-446655440000
+```
+
+### `components/responses`
+
+Sempre incluir estas respostas de erro padrão. São referenciadas por todos os endpoints via `$ref`:
+
+```yaml
+BadRequest:
+  description: Requisição inválida
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Requisição inválida
+
+Unauthorized:
+  description: Não autenticado
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Não autenticado
+
+NotFound:
+  description: Recurso não encontrado
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Recurso não encontrado
+
+UnprocessableEntity:
+  description: Entidade não processável — erro de validação dos dados enviados
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Dados inválidos ou ausentes
+
+Forbidden:
+  description: Acesso proibido — autenticado mas sem permissão para este recurso
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Acesso proibido
+
+InternalServerError:
+  description: Erro interno do servidor
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Erro interno do servidor
+```
+
 ---
 
 ## Etapa 4 — Schemas de Request/Response
@@ -266,6 +369,7 @@ Para cada schema declarado em `## Schemas` no SPEC.md, gerar em `components/sche
 | `string`        | `type: string`                |
 | `int`           | `type: integer`               |
 | `float`         | `type: number` / `format: float` |
+| `double`        | `type: number` / `format: double` |
 | `bool`/`boolean`| `type: boolean`               |
 | `uuid`          | `type: string` / `format: uuid` |
 | `date`          | `type: string` / `format: date` |
@@ -285,7 +389,29 @@ Para cada schema declarado em `## Schemas` no SPEC.md, gerar em `components/sche
       description: {descrição}
 ```
 
-Para listas (`list[NomeDoSchema]`), usar:
+**Campos do tipo lista dentro de schemas:**
+
+Para `list[tipo primitivo]` (ex: `list[string]`, `list[int]`):
+
+```yaml
+{campo}:
+  type: array
+  items:
+    type: {tipo mapeado}
+  description: {descrição}
+```
+
+Para `list[NomeDoSchema]` (ex: `list[ItemSchema]`):
+
+```yaml
+{campo}:
+  type: array
+  items:
+    $ref: '#/components/schemas/{NomeDoSchema}'
+  description: {descrição}
+```
+
+**Resposta do tipo lista** — para uso em `content` de responses quando o SPEC.md declara `list[NomeDoSchema]`:
 
 ```yaml
 content:
@@ -299,6 +425,31 @@ content:
 ---
 
 ## Etapa 5 — Paths e Parâmetros
+
+### `operationId`
+
+Gerar um `operationId` único para cada endpoint seguindo a convenção `{httpMethod}{PathSegments}` em camelCase:
+- Método HTTP em minúsculas
+- Segmentos do path em PascalCase
+- Substituir `{param}` por `By{Param}` (ex: `{id}` → `ById`)
+
+| Endpoint              | operationId        |
+|-----------------------|--------------------|
+| `POST /auth/register` | `postAuthRegister` |
+| `GET /auth/me`        | `getAuthMe`        |
+| `GET /users/{id}`     | `getUserById`      |
+| `PUT /users/{id}`     | `putUserById`      |
+| `DELETE /users/{id}`  | `deleteUserById`   |
+| `GET /orders`         | `getOrders`        |
+
+### `X-Request-ID` (sempre incluir em todos os endpoints)
+
+Referenciar o parâmetro definido em `components/parameters`. Deve ser o primeiro item da lista de `parameters` de cada endpoint:
+
+```yaml
+parameters:
+  - $ref: '#/components/parameters/RequestId'
+```
 
 ### Path params
 
@@ -338,15 +489,40 @@ parameters:
 
 ### Request body
 
+O campo `content_type` no SPEC.md define o Content-Type do endpoint (padrão: `application/json`).
+
+**`application/json` (padrão):**
+
 ```yaml
 requestBody:
   required: true
+  description: {request_body_description se declarado no SPEC.md; omitir se ausente}
   content:
     application/json:
       schema:
         $ref: '#/components/schemas/{NomeDoSchema}'
-      example:
-        {campos do request_example}
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            {campos do request_example}
+```
+
+**`application/x-www-form-urlencoded`:**
+
+```yaml
+requestBody:
+  required: true
+  description: {request_body_description se declarado no SPEC.md; omitir se ausente}
+  content:
+    application/x-www-form-urlencoded:
+      schema:
+        $ref: '#/components/schemas/{NomeDoSchema}'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            {campos do request_example}
 ```
 
 ---
@@ -356,6 +532,9 @@ requestBody:
 Sempre incluir os códigos abaixo para cada método. Se o endpoint declarar respostas adicionais no SPEC.md, incluí-las junto.
 
 ### GET
+
+**Se a resposta for um objeto único:**
+
 ```yaml
 responses:
   '200':
@@ -364,31 +543,46 @@ responses:
       application/json:
         schema:
           $ref: '#/components/schemas/{NomeDoSchema}'
-        example: {response_example.200}
+        examples:
+          default:
+            summary: Exemplo padrão
+            value: {response_example.200}
   '400':
-    description: Requisição inválida
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Requisição inválida
+    $ref: '#/components/responses/BadRequest'
   '401':
-    description: Não autenticado
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Não autenticado
+    $ref: '#/components/responses/Unauthorized'
+  '403':
+    $ref: '#/components/responses/Forbidden'
+  '404':
+    $ref: '#/components/responses/NotFound'
   '500':
-    description: Erro interno do servidor
+    $ref: '#/components/responses/InternalServerError'
+```
+
+**Se a resposta for uma lista (`list[NomeDoSchema]`):**
+
+```yaml
+responses:
+  '200':
+    description: Sucesso
     content:
       application/json:
         schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Erro interno do servidor
+          type: array
+          items:
+            $ref: '#/components/schemas/{NomeDoSchema}'
+        examples:
+          default:
+            summary: Exemplo padrão
+            value: [{response_example.200}]
+  '400':
+    $ref: '#/components/responses/BadRequest'
+  '401':
+    $ref: '#/components/responses/Unauthorized'
+  '403':
+    $ref: '#/components/responses/Forbidden'
+  '500':
+    $ref: '#/components/responses/InternalServerError'
 ```
 
 ### POST
@@ -400,48 +594,66 @@ responses:
       application/json:
         schema:
           $ref: '#/components/schemas/{NomeDoSchema}'
-        example: {response_example.201}
+        examples:
+          default:
+            summary: Exemplo padrão
+            value: {response_example.201}
   '400':
-    description: Requisição inválida
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Requisição inválida
+    $ref: '#/components/responses/BadRequest'
   '401':
-    description: Não autenticado
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Não autenticado
+    $ref: '#/components/responses/Unauthorized'
+  '403':
+    $ref: '#/components/responses/Forbidden'
   '404':
-    description: Recurso não encontrado
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Recurso não encontrado
+    $ref: '#/components/responses/NotFound'
+  '422':
+    $ref: '#/components/responses/UnprocessableEntity'
   '500':
-    description: Erro interno do servidor
-    content:
-      application/json:
-        schema:
-          $ref: '#/components/schemas/ErrorResponse'
-        example:
-          detail: Erro interno do servidor
+    $ref: '#/components/responses/InternalServerError'
 ```
 
-### PUT / PATCH / DELETE
-Mesmos códigos que POST (201 vira 200 para PUT/PATCH, e 204 sem body para DELETE).
-
-**DELETE sem body de resposta:**
+### PUT / PATCH
 ```yaml
+responses:
+  '200':
+    description: Atualizado com sucesso
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/{NomeDoSchema}'
+        examples:
+          default:
+            summary: Exemplo padrão
+            value: {response_example.200}
+  '400':
+    $ref: '#/components/responses/BadRequest'
+  '401':
+    $ref: '#/components/responses/Unauthorized'
+  '403':
+    $ref: '#/components/responses/Forbidden'
+  '404':
+    $ref: '#/components/responses/NotFound'
+  '422':
+    $ref: '#/components/responses/UnprocessableEntity'
+  '500':
+    $ref: '#/components/responses/InternalServerError'
+```
+
+### DELETE
+```yaml
+responses:
   '204':
     description: Removido com sucesso
+  '400':
+    $ref: '#/components/responses/BadRequest'
+  '401':
+    $ref: '#/components/responses/Unauthorized'
+  '403':
+    $ref: '#/components/responses/Forbidden'
+  '404':
+    $ref: '#/components/responses/NotFound'
+  '500':
+    $ref: '#/components/responses/InternalServerError'
 ```
 
 ---
@@ -476,10 +688,13 @@ Criar o diretório `docs/` se não existir. Salvar como `docs/openapi.yml`.
 ## Regras de Execução
 
 1. **Sempre leia o SPEC.md completo** antes de começar a gerar o YAML
-2. **Nunca escreva schemas inline** nos paths — sempre use `$ref: '#/components/schemas/{Nome}'`
+2. **Nunca escreva schemas ou respostas de erro inline** nos paths — sempre use `$ref: '#/components/schemas/{Nome}'` para schemas e `$ref: '#/components/responses/{Nome}'` para erros padrão
 3. **Sempre inclua `ErrorResponse`** em `components/schemas`, mesmo que o SPEC.md não declare
 4. **Sempre inclua os códigos de resposta padrão** do método HTTP, mesmo que não declarados no SPEC.md
 5. **Se o endpoint não declarar `security`**, pergunte ao usuário antes de assumir
 6. **Se um schema referenciado em `responses` não estiver declarado em `## Schemas`**, avise o usuário e gere um schema vazio com comentário `# TODO: definir campos`
 7. **Sempre valide se o YAML gerado é sintaticamente correto** antes de salvar — indentação e estrutura devem estar perfeitas
 8. **Ao final**, informe ao usuário o caminho do arquivo gerado e a lista de endpoints documentados
+9. **Sempre inclua `operationId`** em cada endpoint seguindo a convenção `{httpMethod}{PathSegments}` em camelCase — deve ser único em todo o arquivo
+10. **Sempre inclua `X-Request-ID`** em `components/parameters/RequestId` e referencie com `$ref: '#/components/parameters/RequestId'` como primeiro parâmetro de todos os endpoints
+11. **Sempre inclua os erros padrão em `components/responses`** e referencie-os via `$ref` — nunca inline. Use `examples` (plural) com chave `default` para todos os exemplos de request/response

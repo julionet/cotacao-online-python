@@ -32,10 +32,14 @@ Leia o arquivo `.claude/skills/skill-openapi-builder.md` e siga **exatamente** t
 Antes de escrever o arquivo final, valide:
 
 - Indentação YAML consistente (2 espaços)
-- Todos os `$ref` apontam para schemas declarados em `components/schemas`
+- Todos os `$ref` de schemas apontam para `components/schemas` e os de erros para `components/responses`
 - Todos os endpoints têm ao menos os códigos de resposta padrão do seu método HTTP
 - O schema `ErrorResponse` está presente em `components/schemas`
-- Nenhum valor está escrito inline quando deveria usar `$ref`
+- As respostas de erro padrão estão em `components/responses` (BadRequest, Unauthorized, Forbidden, NotFound, UnprocessableEntity, InternalServerError)
+- Nenhum erro padrão está escrito inline — todos usam `$ref: '#/components/responses/{Nome}'`
+- Todos os exemplos usam `examples` (plural) com chave `default`, nunca `example` (singular)
+- Todos os endpoints têm `operationId` único no formato `{httpMethod}{PathSegments}` em camelCase
+- O parâmetro `X-Request-ID` está declarado em `components/parameters/RequestId` e referenciado em todos os endpoints
 
 ## Após Executar
 
