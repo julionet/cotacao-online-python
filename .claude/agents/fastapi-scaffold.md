@@ -28,9 +28,17 @@ projeto: {nome_do_projeto}
 scaffold: vazio
 ```
 
+## Guardrails
+
+- **Nunca sobrescreva um projeto existente** sem confirmar com o usuário primeiro. Se o diretório já existir, informe e pergunte se deve continuar.
+- **Nunca crie o arquivo `.env`** – apenas `.env.example`. O `.env` real é responsabilidade do usuário.
+- Se o usuário fornecer campos com tipos inválidos ou ambíguos para Python/SQLAlchemy, pergunte antes de assumir um tipo.
+- O campo `password` nunca deve aparecer em nenhum schema de resposta (`UserResponse` ou qualquer `EntityResponse`).
+
 ## Após Executar
 
 Informe ao usuário:
 - Lista completa de arquivos criados
+- Como criar o `.env` a partir do `.env.example`
 - Como iniciar o projeto (`uvicorn app.main:app --reload`)
 - Quais variáveis do `.env` precisam ser preenchidas
