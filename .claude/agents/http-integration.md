@@ -18,8 +18,11 @@ Se o usuário não informou todos os dados necessários, peça antes de agir:
 ```
 api: {NomeDaApi}
 base_url: {URL base da API}
-autenticação: api_key | bearer_token | nenhuma
-header_name: {nome do header}  (apenas para api_key)
+autenticação: api_key | bearer_token | oauth2 | nenhuma
+header_name: {nome do header}         (apenas para api_key)
+token_url: {URL do endpoint de token} (apenas para oauth2)
+client_id: {client id}                (apenas para oauth2)
+client_secret: {client secret}        (apenas para oauth2)
 endpoints: {descrição dos endpoints a consumir}
 timeout: {segundos}  (opcional, padrão 20)
 paginada: sim | não
