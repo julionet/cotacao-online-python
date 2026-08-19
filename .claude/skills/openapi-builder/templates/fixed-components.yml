@@ -1,0 +1,179 @@
+# Template: Componentes Fixos
+#
+# Este arquivo não é o YAML final — é um catálogo de blocos prontos para copiar
+# em `components/` no docs/openapi.yml. Alguns blocos são condicionais (indicado
+# em comentário). Todos os demais são sempre incluídos, independente do SPEC.md.
+
+# ---------------------------------------------------------------------------
+# components/schemas/ErrorResponse — SEMPRE incluir
+# Referenciado por todos os erros padrão abaixo.
+# ---------------------------------------------------------------------------
+ErrorResponse:
+  type: object
+  required:
+    - detail
+  properties:
+    detail:
+      type: string
+      description: Descrição do erro
+  example:
+    detail: Recurso não encontrado
+
+# ---------------------------------------------------------------------------
+# components/schemas/PaginationMeta — SEMPRE incluir
+# Usado por qualquer endpoint cuja resposta seja declarada como
+# `paginated[NomeDoSchema]` no SPEC.md. Ver templates/responses-by-method.md.
+# ---------------------------------------------------------------------------
+PaginationMeta:
+  type: object
+  required:
+    - page
+    - page_size
+    - total_items
+    - total_pages
+  properties:
+    page:
+      type: integer
+      minimum: 1
+      description: Página atual
+    page_size:
+      type: integer
+      minimum: 1
+      description: Quantidade de itens por página
+    total_items:
+      type: integer
+      minimum: 0
+      description: Total de itens disponíveis
+    total_pages:
+      type: integer
+      minimum: 0
+      description: Total de páginas disponíveis
+
+# ---------------------------------------------------------------------------
+# components/securitySchemes — incluir conforme `## Security` no SPEC.md
+# ---------------------------------------------------------------------------
+
+# type: bearer_jwt (ou "ambos")
+BearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: Token JWT obtido via POST /auth/login
+
+# type: api_key (ou "ambos")
+ApiKeyAuth:
+  type: apiKey
+  in: header
+  name: "{api_key_header}"   # substituir por Security.api_key_header do SPEC.md
+  description: "API Key enviada no header {api_key_header}"
+
+# ---------------------------------------------------------------------------
+# components/parameters — SEMPRE incluir RequestId
+# ---------------------------------------------------------------------------
+RequestId:
+  name: X-Request-ID
+  in: header
+  required: false
+  schema:
+    type: string
+    format: uuid
+  description: Identificador único da requisição no formato UUID
+  example: 550e8400-e29b-41d4-a716-446655440000
+
+# Incluir PageParam/PageSizeParam apenas se houver ao menos um endpoint
+# com resposta paginated[NomeDoSchema] no SPEC.md.
+PageParam:
+  name: page
+  in: query
+  required: false
+  schema:
+    type: integer
+    minimum: 1
+    default: 1
+  description: Número da página desejada
+
+PageSizeParam:
+  name: page_size
+  in: query
+  required: false
+  schema:
+    type: integer
+    minimum: 1
+    maximum: 100
+    default: 20
+  description: Quantidade de itens por página (máximo 100)
+
+# ---------------------------------------------------------------------------
+# components/responses — SEMPRE incluir. Referenciadas via $ref, nunca inline.
+# ---------------------------------------------------------------------------
+BadRequest:
+  description: Requisição inválida
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Requisição inválida
+
+Unauthorized:
+  description: Não autenticado
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Não autenticado
+
+NotFound:
+  description: Recurso não encontrado
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Recurso não encontrado
+
+UnprocessableEntity:
+  description: Entidade não processável — erro de validação dos dados enviados
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Dados inválidos ou ausentes
+
+Forbidden:
+  description: Acesso proibido — autenticado mas sem permissão para este recurso
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Acesso proibido
+
+InternalServerError:
+  description: Erro interno do servidor
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorResponse'
+      examples:
+        default:
+          summary: Exemplo padrão
+          value:
+            detail: Erro interno do servidor

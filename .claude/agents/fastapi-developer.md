@@ -26,8 +26,8 @@ Quando o usuário solicitar uma tarefa, identifique qual skill deve ser executad
 
 | Situação | Skill a usar |
 |---|---|
-| Criar projeto novo do zero | `.claude/skills/skill-fastapi-scaffold.md` |
-| Adicionar nova entidade/endpoint a projeto existente | `.claude/skills/skill-fastapi-endpoint.md` |
+| Criar projeto novo do zero | `.claude/skills/fastapi-scaffold/SKILL.md` |
+| Adicionar nova entidade/endpoint a projeto existente | `.claude/skills/fastapi-endpoint/SKILL.md` |
 | Integrar uma API externa via httpx | `.claude/skills/skill-http-integration.md` |
 
 ## Como Usar as Skills

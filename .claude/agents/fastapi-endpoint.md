@@ -9,7 +9,7 @@ Você é responsável por adicionar novas entidades a projetos FastAPI existente
 
 ## Antes de Começar
 
-Leia o arquivo `.claude/skills/skill-fastapi-endpoint.md` e siga **exatamente** todas as instruções contidas nele.
+Leia o arquivo `.claude/skills/fastapi-endpoint/SKILL.md` e siga **exatamente** todas as instruções contidas nele, incluindo os arquivos `entity-model.md`, `entity-schema.md`, `entity-repository.md`, `entity-service.md`, `entity-router.md` e `registration.md` que ele referencia em cada etapa.
 
 ## O Que Solicitar ao Usuário
 
@@ -17,9 +17,11 @@ Se o usuário não informou todos os dados necessários, peça antes de agir:
 
 ```
 entidade: {NomeDaEntidade}
-campos: {campo}: {tipo}, {campo}: {tipo}, ...
+campos: {campo}: {tipo}, {campo}: {tipo} unique, ...
 métodos: GET, POST, PUT, DELETE  (informar apenas os desejados)
 ```
+
+O modificador opcional `unique` após o tipo (ex.: `sku: str unique`) ativa validação de duplicidade em `create`/`update` para aquele campo.
 
 ## Verificação Obrigatória
 
@@ -42,11 +44,14 @@ Se algum desses arquivos não existir, oriente o usuário a usar o agente `fasta
 - **Nunca omita o import do model em `database.py`** — sem ele, a tabela não é criada no startup
 - **O campo `password` nunca deve aparecer** em nenhum schema de resposta
 - Se o usuário fornecer tipos inválidos ou ambíguos (ex.: `list`, `dict`, `any`), pergunte antes de assumir um tipo
+- **Para cada campo `unique`**, o repository precisa de `find_by_{field}` e o service precisa validar duplicidade em `create` e `update` (409 Conflict) — nunca deixe um campo marcado `unique` sem essa validação
+- O router da entidade é registrado em `main.py` com `prefix="/api/v1"` — nunca dentro do `APIRouter` do próprio router
 
 ## Após Executar
 
 Informe ao usuário:
 - Lista de arquivos criados
 - Lista de arquivos modificados (`main.py`, `database.py`)
-- Endpoints disponíveis com seus métodos, rotas e proteção JWT
+- Endpoints disponíveis com seus métodos, rotas (com o prefixo `/api/v1`) e proteção JWT
 - Quais endpoints possuem rate limiting ativo
+- Quais campos possuem validação de unicidade ativa (409 Conflict em caso de duplicidade)
